@@ -39,6 +39,10 @@ public class SettingsGUI implements InventoryHolder {
     private final UUID     viewerId;
     private final Inventory inventory;
 
+    private final int tpRequestsSlot;
+    private final int autoTpSlot;
+    private final int notificationsSlot;
+
     private boolean requestsEnabled;
     private boolean autoAccept;
     private boolean notificationsEnabled;
@@ -57,6 +61,13 @@ public class SettingsGUI implements InventoryHolder {
 
         String rawTitle = plugin.getConfigManager().getMessage("gui.titles.settings");
         int size = cfg != null ? cfg.getInt("size", 27) : 27;
+
+        this.tpRequestsSlot    = cfg != null ? cfg.getInt("tp-requests-slot", DEFAULT_TP_REQUESTS_SLOT)
+                                             : DEFAULT_TP_REQUESTS_SLOT;
+        this.autoTpSlot        = cfg != null ? cfg.getInt("autotp-slot", DEFAULT_AUTOTP_SLOT)
+                                             : DEFAULT_AUTOTP_SLOT;
+        this.notificationsSlot = cfg != null ? cfg.getInt("notifications-slot", DEFAULT_NOTIFICATIONS_SLOT)
+                                             : DEFAULT_NOTIFICATIONS_SLOT;
 
         this.inventory = Bukkit.createInventory(this, size,
                 net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
@@ -92,25 +103,19 @@ public class SettingsGUI implements InventoryHolder {
         int headSlot = cfg != null ? cfg.getInt("head-slot", DEFAULT_HEAD_SLOT) : DEFAULT_HEAD_SLOT;
         inventory.setItem(headSlot, buildHeadItem(plugin, cfg, viewer, stats));
 
-        int reqSlot = cfg != null
-                ? cfg.getInt("tp-requests-slot", DEFAULT_TP_REQUESTS_SLOT) : DEFAULT_TP_REQUESTS_SLOT;
-        inventory.setItem(reqSlot, buildToggleItem(plugin, cfg, requestsEnabled,
+        inventory.setItem(tpRequestsSlot, buildToggleItem(plugin, cfg, requestsEnabled,
                 "tp-requests-enabled-item", "tp-requests-disabled-item",
                 Material.LIME_STAINED_GLASS_PANE, Material.RED_STAINED_GLASS_PANE,
                 "gui.settings.tp-requests-on",   "gui.settings.tp-requests-off",
                 "gui.settings.tp-requests-lore-on", "gui.settings.tp-requests-lore-off"));
 
-        int autoSlot = cfg != null
-                ? cfg.getInt("autotp-slot", DEFAULT_AUTOTP_SLOT) : DEFAULT_AUTOTP_SLOT;
-        inventory.setItem(autoSlot, buildToggleItem(plugin, cfg, autoAccept,
+        inventory.setItem(autoTpSlot, buildToggleItem(plugin, cfg, autoAccept,
                 "autotp-enabled-item", "autotp-disabled-item",
                 Material.LIME_STAINED_GLASS_PANE, Material.RED_STAINED_GLASS_PANE,
                 "gui.settings.autotp-on",   "gui.settings.autotp-off",
                 "gui.settings.autotp-lore-on", "gui.settings.autotp-lore-off"));
 
-        int notifSlot = cfg != null
-                ? cfg.getInt("notifications-slot", DEFAULT_NOTIFICATIONS_SLOT) : DEFAULT_NOTIFICATIONS_SLOT;
-        inventory.setItem(notifSlot, buildToggleItem(plugin, cfg, notificationsEnabled,
+        inventory.setItem(notificationsSlot, buildToggleItem(plugin, cfg, notificationsEnabled,
                 "notifications-enabled-item", "notifications-disabled-item",
                 Material.LIME_STAINED_GLASS_PANE, Material.RED_STAINED_GLASS_PANE,
                 "gui.settings.notifications-on",   "gui.settings.notifications-off",
@@ -179,22 +184,9 @@ public class SettingsGUI implements InventoryHolder {
         buildContents(plugin, viewer, stats);
     }
 
-    public int getTpRequestsSlot(TpShield plugin) {
-        ConfigurationSection cfg = plugin.getConfigManager().getGuiSection("gui.settings");
-        return cfg != null ? cfg.getInt("tp-requests-slot", DEFAULT_TP_REQUESTS_SLOT)
-                           : DEFAULT_TP_REQUESTS_SLOT;
-    }
-
-    public int getAutoTpSlot(TpShield plugin) {
-        ConfigurationSection cfg = plugin.getConfigManager().getGuiSection("gui.settings");
-        return cfg != null ? cfg.getInt("autotp-slot", DEFAULT_AUTOTP_SLOT) : DEFAULT_AUTOTP_SLOT;
-    }
-
-    public int getNotificationsSlot(TpShield plugin) {
-        ConfigurationSection cfg = plugin.getConfigManager().getGuiSection("gui.settings");
-        return cfg != null ? cfg.getInt("notifications-slot", DEFAULT_NOTIFICATIONS_SLOT)
-                           : DEFAULT_NOTIFICATIONS_SLOT;
-    }
+    public int getTpRequestsSlot(TpShield plugin)    { return tpRequestsSlot; }
+    public int getAutoTpSlot(TpShield plugin)        { return autoTpSlot; }
+    public int getNotificationsSlot(TpShield plugin) { return notificationsSlot; }
 
     @Override public Inventory getInventory()       { return inventory; }
     public UUID     getViewerId()                   { return viewerId; }

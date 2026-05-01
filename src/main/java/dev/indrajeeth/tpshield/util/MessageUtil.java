@@ -8,9 +8,12 @@ import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.regex.Pattern;
+
 public class MessageUtil {
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
     private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.legacyAmpersand();
+    private static final Pattern LEGACY_COLOR_PATTERN = Pattern.compile("&[0-9a-fk-orA-FK-OR]");
 
     public static Component toComponent(String message) {
         if (message == null || message.isEmpty()) {
@@ -29,7 +32,7 @@ public class MessageUtil {
     }
 
     private static boolean containsLegacyColorCodes(String message) {
-        return message.matches(".*&[0-9a-fk-orA-FK-OR].*");
+        return LEGACY_COLOR_PATTERN.matcher(message).find();
     }
 
     public static void sendMessage(Player player, String message) {

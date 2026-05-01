@@ -29,6 +29,10 @@ public class RatingGUI implements InventoryHolder {
     private static final int   DEFAULT_TRAP_SLOT    = 16;
     private static final int   DEFAULT_CONFIRM_SLOT = 22;
 
+    private final int[] starSlots;
+    private final int   trapSlot;
+    private final int   confirmSlot;
+
     public RatingGUI(TpShield plugin, RatingSession session) {
         this.session = session;
 
@@ -37,11 +41,24 @@ public class RatingGUI implements InventoryHolder {
         String title = plugin.getConfigManager().getMessage("gui.titles.rating");
         int size = cfg != null ? cfg.getInt("size", 27) : 27;
 
+        this.starSlots   = readStarSlots(cfg);
+        this.trapSlot    = cfg != null ? cfg.getInt("trap-report-slot", DEFAULT_TRAP_SLOT) : DEFAULT_TRAP_SLOT;
+        this.confirmSlot = cfg != null ? cfg.getInt("confirm-slot", DEFAULT_CONFIRM_SLOT) : DEFAULT_CONFIRM_SLOT;
+
         this.inventory = Bukkit.createInventory(this, size,
                 net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
                         .legacyAmpersand().deserialize(title));
 
         refresh(plugin);
+    }
+
+    private static int[] readStarSlots(ConfigurationSection cfg) {
+        if (cfg == null) return DEFAULT_STAR_SLOTS;
+        List<Integer> raw = cfg.getIntegerList("star-slots");
+        if (raw.isEmpty()) return DEFAULT_STAR_SLOTS;
+        int[] out = new int[raw.size()];
+        for (int i = 0; i < raw.size(); i++) out[i] = raw.get(i);
+        return out;
     }
 
     /** Rebuild all items to reflect the current session state. */
@@ -54,22 +71,12 @@ public class RatingGUI implements InventoryHolder {
                 Material.GRAY_STAINED_GLASS_PANE);
         for (int i = 0; i < size; i++) inventory.setItem(i, filler);
 
-        int[] starSlots = DEFAULT_STAR_SLOTS;
-        if (cfg != null) {
-            List<?> raw = cfg.getList("star-slots");
-            if (raw != null && !raw.isEmpty()) {
-                starSlots = raw.stream().mapToInt(o -> (int) o).toArray();
-            }
-        }
         for (int i = 0; i < starSlots.length; i++) {
             int stars = i + 1;
             inventory.setItem(starSlots[i], buildStarItem(plugin, cfg, stars, session.getStars() >= stars));
         }
 
-        int trapSlot = cfg != null ? cfg.getInt("trap-report-slot", DEFAULT_TRAP_SLOT) : DEFAULT_TRAP_SLOT;
         inventory.setItem(trapSlot, buildTrapItem(plugin, cfg, session.isTrapReport()));
-
-        int confirmSlot = cfg != null ? cfg.getInt("confirm-slot", DEFAULT_CONFIRM_SLOT) : DEFAULT_CONFIRM_SLOT;
         inventory.setItem(confirmSlot, buildConfirmItem(plugin, cfg, session.isReady()));
     }
 
@@ -122,25 +129,12 @@ public class RatingGUI implements InventoryHolder {
 
     /** Returns the star value (1–5) for the clicked slot, or -1 if not a star slot. */
     public int getStarForSlot(TpShield plugin, int slot) {
-        ConfigurationSection cfg = plugin.getConfigManager().getGuiSection("gui.rating");
-        int[] starSlots = DEFAULT_STAR_SLOTS;
-        if (cfg != null) {
-            List<?> raw = cfg.getList("star-slots");
-            if (raw != null && !raw.isEmpty()) starSlots = raw.stream().mapToInt(o -> (int) o).toArray();
-        }
         for (int i = 0; i < starSlots.length; i++) {
             if (starSlots[i] == slot) return i + 1;
         }
         return -1;
     }
 
-    public int getTrapSlot(TpShield plugin) {
-        ConfigurationSection cfg = plugin.getConfigManager().getGuiSection("gui.rating");
-        return cfg != null ? cfg.getInt("trap-report-slot", DEFAULT_TRAP_SLOT) : DEFAULT_TRAP_SLOT;
-    }
-
-    public int getConfirmSlot(TpShield plugin) {
-        ConfigurationSection cfg = plugin.getConfigManager().getGuiSection("gui.rating");
-        return cfg != null ? cfg.getInt("confirm-slot", DEFAULT_CONFIRM_SLOT) : DEFAULT_CONFIRM_SLOT;
-    }
+    public int getTrapSlot(TpShield plugin)    { return trapSlot; }
+    public int getConfirmSlot(TpShield plugin) { return confirmSlot; }
 }

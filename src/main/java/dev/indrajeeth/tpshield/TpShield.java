@@ -17,6 +17,7 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 public class TpShield extends JavaPlugin {
@@ -89,8 +90,20 @@ public class TpShield extends JavaPlugin {
             }
         }
 
+        if (executorService != null) {
+            executorService.shutdown();
+            try {
+                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                    getLogger().warning("Executor did not drain within 5s; forcing shutdown.");
+                    executorService.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                executorService.shutdownNow();
+            }
+        }
+
         if (databaseManager != null) databaseManager.close();
-        if (executorService != null)  executorService.shutdown();
 
         getLogger().info("TpShield has been disabled!");
         instance = null;

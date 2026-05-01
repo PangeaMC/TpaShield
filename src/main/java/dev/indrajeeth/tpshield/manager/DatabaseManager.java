@@ -8,21 +8,34 @@ import java.sql.*;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 
 public class DatabaseManager {
 
     private final TpShield plugin;
-    private Connection connection;
+    private volatile Connection connection;
     private final File databaseFile;
+    /**
+     * SQLite's JDBC connection is not safe for concurrent statements. Serialise
+     * every DB call through a single worker so reads and writes never overlap.
+     */
+    private final ExecutorService dbExecutor =
+            Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "TpShield-DB");
+                t.setDaemon(true);
+                return t;
+            });
 
     private static final Set<String> VALID_STAT_COLUMNS = Set.of(
             "total_sent", "total_received", "total_accepted", "total_denied",
             "total_ratings", "rating_sum", "total_trap_reports");
 
     private static final Set<String> VALID_PREF_COLUMNS = Set.of(
-            "requests_enabled", "last_request_time", "notification_enabled", "auto_accept");
+            "requests_enabled", "notification_enabled", "auto_accept");
 
     public DatabaseManager(TpShield plugin) {
         this.plugin = plugin;
@@ -42,6 +55,16 @@ public class DatabaseManager {
     }
 
     public void close() {
+        dbExecutor.shutdown();
+        try {
+            if (!dbExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                plugin.getLogger().warning("DB executor did not drain within 5s; forcing shutdown.");
+                dbExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            dbExecutor.shutdownNow();
+        }
         try {
             if (connection != null && !connection.isClosed()) connection.close();
         } catch (SQLException e) {
@@ -49,7 +72,11 @@ public class DatabaseManager {
         }
     }
 
-    public Connection getConnection() {
+    /**
+     * Returns the live JDBC connection. Always called from the single DB worker
+     * thread, so re-opening on close is safe without further locking.
+     */
+    private Connection getConnection() {
         try {
             if (connection == null || connection.isClosed()) initialize();
         } catch (SQLException e) {
@@ -64,7 +91,6 @@ public class DatabaseManager {
                 CREATE TABLE IF NOT EXISTS user_preferences (
                     uuid                 TEXT    PRIMARY KEY,
                     requests_enabled     INTEGER NOT NULL DEFAULT 1,
-                    last_request_time    INTEGER          DEFAULT 0,
                     notification_enabled INTEGER NOT NULL DEFAULT 1,
                     auto_accept          INTEGER NOT NULL DEFAULT 0
                 )
@@ -97,9 +123,6 @@ public class DatabaseManager {
     }
     public CompletableFuture<Boolean> areRequestsEnabled(UUID uuid) {
         return supplyAsync(() -> readIntPref(uuid, "requests_enabled", 1) == 1);
-    }
-    public CompletableFuture<Void>    updateLastRequestTime(UUID uuid, long t) {
-        return runAsync(() -> upsertPref(uuid, "last_request_time", t));
     }
 
     public CompletableFuture<Boolean> isNotificationEnabled(UUID uuid) {
@@ -247,9 +270,9 @@ public class DatabaseManager {
     }
 
     private CompletableFuture<Void> runAsync(Runnable task) {
-        return CompletableFuture.runAsync(task, plugin.getExecutor());
+        return CompletableFuture.runAsync(task, dbExecutor);
     }
     private <T> CompletableFuture<T> supplyAsync(Supplier<T> s) {
-        return CompletableFuture.supplyAsync(s, plugin.getExecutor());
+        return CompletableFuture.supplyAsync(s, dbExecutor);
     }
 }

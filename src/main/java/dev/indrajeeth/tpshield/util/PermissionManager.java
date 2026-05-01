@@ -53,6 +53,10 @@ public final class PermissionManager {
                     }
                 }
             } catch (Exception e) {
+                TpShield.getInstance().getLogger().log(Level.WARNING,
+                        "LuckPerms permission lookup failed for "
+                                + player.getName() + " / " + permission
+                                + " — falling back to Bukkit", e);
             }
         }
         return player.hasPermission(permission);

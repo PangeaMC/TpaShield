@@ -29,6 +29,8 @@ public class ConfirmGUI implements InventoryHolder {
     private final UUID requesterId;
     private final UUID accepterId;
     private final Inventory inventory;
+    private final int acceptSlot;
+    private final int cancelSlot;
 
     public ConfirmGUI(TpShield plugin, Player requester, UUID accepterId,
                       Location accepterLocation, PlayerStats accepterStats) {
@@ -40,6 +42,9 @@ public class ConfirmGUI implements InventoryHolder {
 
         String title = plugin.getConfigManager().getMessage("gui.titles.confirm");
         int size = cfg != null ? cfg.getInt("size", 27) : 27;
+
+        this.acceptSlot = cfg != null ? cfg.getInt("accept-slot", 11) : 11;
+        this.cancelSlot = cfg != null ? cfg.getInt("deny-slot", 15) : 15;
 
         this.inventory = Bukkit.createInventory(this, size,
                 net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
@@ -54,7 +59,6 @@ public class ConfirmGUI implements InventoryHolder {
         inventory.setItem(headSlot,
                 buildAccepterHead(plugin, accepterId, accepterLocation, accepterStats));
 
-        int acceptSlot = cfg != null ? cfg.getInt("accept-slot", 11) : 11;
         ItemStack acceptItem = ItemResolver.resolveAppearance(
                 cfg != null ? cfg.getConfigurationSection("accept-item") : null,
                 Material.LIME_STAINED_GLASS_PANE);
@@ -63,7 +67,6 @@ public class ConfirmGUI implements InventoryHolder {
                 List.of(plugin.getConfigManager().getMessage("gui.confirm.accept-lore")));
         inventory.setItem(acceptSlot, acceptItem);
 
-        int cancelSlot = cfg != null ? cfg.getInt("deny-slot", 15) : 15;
         ItemStack cancelItem = ItemResolver.resolveAppearance(
                 cfg != null ? cfg.getConfigurationSection("deny-item") : null,
                 Material.RED_STAINED_GLASS_PANE);
@@ -73,6 +76,9 @@ public class ConfirmGUI implements InventoryHolder {
         inventory.setItem(cancelSlot, cancelItem);
     }
 
+    public int getAcceptSlot() { return acceptSlot; }
+    public int getCancelSlot() { return cancelSlot; }
+
     private static ItemStack buildAccepterHead(TpShield plugin, UUID accepterId,
                                                Location loc, PlayerStats stats) {
         Player accepter = Bukkit.getPlayer(accepterId);
@@ -80,16 +86,9 @@ public class ConfirmGUI implements InventoryHolder {
         SkullMeta meta  = (SkullMeta) skull.getItemMeta();
         if (meta == null) return skull;
 
-        if (accepter != null) {
-            meta.setOwningPlayer(accepter);
-        } else {
-            meta.setOwningPlayer(Bukkit.getOfflinePlayer(accepterId));
-        }
-
-        String name = accepter != null ? accepter.getName()
-                : (Bukkit.getOfflinePlayer(accepterId).getName() != null
-                   ? Bukkit.getOfflinePlayer(accepterId).getName()
-                   : accepterId.toString());
+        org.bukkit.OfflinePlayer offline = accepter != null ? accepter : Bukkit.getOfflinePlayer(accepterId);
+        meta.setOwningPlayer(offline);
+        String name = offline.getName() != null ? offline.getName() : accepterId.toString();
 
         meta.displayName(MessageUtil.toComponent(
                 plugin.getConfigManager().getMessage("gui.confirm.head-name",

@@ -72,12 +72,7 @@ public class InventoryClickListener implements Listener {
     private void handleConfirmClick(Player player, ConfirmGUI gui, int slot) {
         if (!gui.getRequesterId().equals(player.getUniqueId())) return;
 
-        var cfg = plugin.getConfigManager().getGuiSection("gui.confirm");
-        if (cfg == null) cfg = plugin.getConfigManager().getGuiSection("gui.request");
-        int acceptSlot = cfg != null ? cfg.getInt("accept-slot", 11) : 11;
-        int cancelSlot = cfg != null ? cfg.getInt("deny-slot",   15) : 15;
-
-        if (slot == acceptSlot) {
+        if (slot == gui.getAcceptSlot()) {
             if (plugin.getConfigManager().isCombatEnabled()
                     && !player.hasPermission("tpshield.combat.bypass")
                     && player.hasPermission("tpshield.incombat")) {
@@ -94,7 +89,7 @@ public class InventoryClickListener implements Listener {
                         + plugin.getConfigManager().getMessage("requests.no-accepted-request"));
             }
 
-        } else if (slot == cancelSlot) {
+        } else if (slot == gui.getCancelSlot()) {
             player.closeInventory();
             UUID accepterId = gui.getAccepterId();
             boolean cancelled = plugin.getTeleportManager().cancelAcceptedRequest(player.getUniqueId());

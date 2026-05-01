@@ -83,7 +83,6 @@ public class TeleportRequestManager {
             TPARequest request = new TPARequest(requesterId, targetId, now, requesterLoc, false);
             activeRequests.put(requesterId, request);
             cooldowns.put(requesterId, now);
-            database.updateLastRequestTime(requesterId, now);
             database.incrementStat(requesterId, "total_sent");
             database.incrementStat(targetId,    "total_received");
 
@@ -142,7 +141,6 @@ public class TeleportRequestManager {
             TPARequest request = new TPARequest(requesterId, targetId, now, requesterLoc, true);
             activeRequests.put(requesterId, request);
             cooldowns.put(requesterId, now);
-            database.updateLastRequestTime(requesterId, now);
             database.incrementStat(requesterId, "total_sent");
             database.incrementStat(targetId,    "total_received");
 
@@ -515,43 +513,54 @@ public class TeleportRequestManager {
     public void cleanupExpiredRequests() {
         long now       = System.currentTimeMillis();
         long timeoutMs = plugin.getConfigManager().getRequestTimeout() * 1000L;
+        List<UUID> expiredRequesters = new ArrayList<>();
+        List<UUID> expiredTargets = new ArrayList<>();
         activeRequests.entrySet().removeIf(e -> {
             if (now - e.getValue().getRequestTime() > timeoutMs) {
                 UUID requesterId = e.getKey();
                 requesterToTarget.remove(requesterId);
-                Player requester = Bukkit.getPlayer(requesterId);
-                if (requester != null) {
-                    MessageUtil.sendMessageWithPlaceholders(requester,
-                            plugin.getConfigManager().getPrefix()
-                            + plugin.getConfigManager().getMessage("requests.expired"));
-                    SoundUtil.play(requester, "request-expired");
-                }
-                UUID targetId = e.getValue().getTargetId();
-                Player target = Bukkit.getPlayer(targetId);
-                if (target != null) {
-                    MessageUtil.sendMessageWithPlaceholders(target,
-                            plugin.getConfigManager().getPrefix()
-                            + plugin.getConfigManager().getMessage("requests.expired-target"));
-                }
+                expiredRequesters.add(requesterId);
+                expiredTargets.add(e.getValue().getTargetId());
                 return true;
             }
             return false;
         });
+        List<UUID> expiredConfirmRequesters = new ArrayList<>();
         acceptedPending.entrySet().removeIf(e -> {
             if (now - e.getValue().acceptTime() > timeoutMs) {
-                UUID requesterId = e.getKey();
-                Player requester = Bukkit.getPlayer(requesterId);
-                if (requester != null) {
-                    MessageUtil.sendMessageWithPlaceholders(requester,
-                            plugin.getConfigManager().getPrefix()
-                            + plugin.getConfigManager().getMessage("requests.confirm-expired"));
-                }
+                expiredConfirmRequesters.add(e.getKey());
                 return true;
             }
             return false;
         });
         long cooldownMs = plugin.getConfigManager().getCooldown() * 1000L;
         cooldowns.entrySet().removeIf(e -> now - e.getValue() > cooldownMs + COOLDOWN_GRACE_PERIOD_MS);
+
+        if (expiredRequesters.isEmpty() && expiredConfirmRequesters.isEmpty()) return;
+
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            String prefix = plugin.getConfigManager().getPrefix();
+            for (int i = 0; i < expiredRequesters.size(); i++) {
+                Player requester = Bukkit.getPlayer(expiredRequesters.get(i));
+                if (requester != null) {
+                    MessageUtil.sendMessageWithPlaceholders(requester,
+                            prefix + plugin.getConfigManager().getMessage("requests.expired"));
+                    SoundUtil.play(requester, "request-expired");
+                }
+                Player target = Bukkit.getPlayer(expiredTargets.get(i));
+                if (target != null) {
+                    MessageUtil.sendMessageWithPlaceholders(target,
+                            prefix + plugin.getConfigManager().getMessage("requests.expired-target"));
+                }
+            }
+            for (UUID requesterId : expiredConfirmRequesters) {
+                Player requester = Bukkit.getPlayer(requesterId);
+                if (requester != null) {
+                    MessageUtil.sendMessageWithPlaceholders(requester,
+                            prefix + plugin.getConfigManager().getMessage("requests.confirm-expired"));
+                }
+            }
+        });
     }
 
     /**
