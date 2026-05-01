@@ -3,6 +3,7 @@ package dev.indrajeeth.tpshield.command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import dev.indrajeeth.tpshield.TpShield;
 import dev.indrajeeth.tpshield.manager.CommandManager;
+import dev.indrajeeth.tpshield.util.VanishUtil;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.Bukkit;
@@ -10,6 +11,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Registers all TpShield commands via Paper's Brigadier Lifecycle API.
@@ -47,7 +49,10 @@ public final class BrigadierRegistrar {
                     .then(Commands.argument("player", StringArgumentType.word())
                         .suggests((ctx, builder) -> {
                             String prefix = builder.getRemaining().toLowerCase();
+                            UUID self = ctx.getSource().getSender() instanceof Player p ? p.getUniqueId() : null;
                             Bukkit.getOnlinePlayers().stream()
+                                .filter(p -> self == null || !p.getUniqueId().equals(self))
+                                .filter(p -> !VanishUtil.isVanished(p))
                                 .map(Player::getName)
                                 .filter(n -> n.toLowerCase().startsWith(prefix))
                                 .forEach(builder::suggest);
@@ -67,7 +72,10 @@ public final class BrigadierRegistrar {
                     .then(Commands.argument("player", StringArgumentType.word())
                         .suggests((ctx, builder) -> {
                             String prefix = builder.getRemaining().toLowerCase();
+                            UUID self = ctx.getSource().getSender() instanceof Player p ? p.getUniqueId() : null;
                             Bukkit.getOnlinePlayers().stream()
+                                .filter(p -> self == null || !p.getUniqueId().equals(self))
+                                .filter(p -> !VanishUtil.isVanished(p))
                                 .map(Player::getName)
                                 .filter(n -> n.toLowerCase().startsWith(prefix))
                                 .forEach(builder::suggest);
@@ -92,6 +100,7 @@ public final class BrigadierRegistrar {
                                     .getSentRequestsBy(player.getUniqueId()).stream()
                                     .map(Bukkit::getPlayer)
                                     .filter(java.util.Objects::nonNull)
+                                    .filter(p -> !VanishUtil.isVanished(p))
                                     .map(Player::getName)
                                     .filter(nm -> nm.toLowerCase().startsWith(prefix))
                                     .forEach(builder::suggest);
@@ -119,6 +128,7 @@ public final class BrigadierRegistrar {
                                         .getPendingRequestsFor(player.getUniqueId()).stream()
                                         .map(Bukkit::getPlayer)
                                         .filter(java.util.Objects::nonNull)
+                                        .filter(p -> !VanishUtil.isVanished(p))
                                         .map(Player::getName)
                                         .filter(nm -> nm.toLowerCase().startsWith(prefix))
                                         .forEach(builder::suggest);
@@ -145,6 +155,7 @@ public final class BrigadierRegistrar {
                                     .getPendingRequestsFor(player.getUniqueId()).stream()
                                     .map(Bukkit::getPlayer)
                                     .filter(java.util.Objects::nonNull)
+                                    .filter(p -> !VanishUtil.isVanished(p))
                                     .map(Player::getName)
                                     .filter(nm -> nm.toLowerCase().startsWith(prefix))
                                     .forEach(builder::suggest);
@@ -166,6 +177,7 @@ public final class BrigadierRegistrar {
                         .suggests((ctx, builder) -> {
                             String prefix = builder.getRemaining().toLowerCase();
                             Bukkit.getOnlinePlayers().stream()
+                                .filter(p -> !VanishUtil.isVanished(p))
                                 .map(Player::getName)
                                 .filter(n -> n.toLowerCase().startsWith(prefix))
                                 .forEach(builder::suggest);

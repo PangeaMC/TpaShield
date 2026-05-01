@@ -2,6 +2,7 @@ package dev.indrajeeth.tpshield.command;
 
 import dev.indrajeeth.tpshield.TpShield;
 import dev.indrajeeth.tpshield.util.MessageUtil;
+import dev.indrajeeth.tpshield.util.VanishUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -68,13 +69,15 @@ public class TPCancelCommand extends SimpleCommandHandler {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1 && sender instanceof Player player) {
-            return requestManager.getSentRequestsBy(player.getUniqueId()).stream()
+            List<String> names = requestManager.getSentRequestsBy(player.getUniqueId()).stream()
                     .map(Bukkit::getPlayer)
                     .filter(java.util.Objects::nonNull)
+                    .filter(p -> !VanishUtil.isVanished(p))
                     .map(Player::getName)
                     .collect(java.util.stream.Collectors.toList());
+            return filterByPrefix(names, args[0]);
         }
-        return null;
+        return List.of();
     }
 
 }

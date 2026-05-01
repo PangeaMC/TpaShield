@@ -2,6 +2,7 @@ package dev.indrajeeth.tpshield.command;
 
 import dev.indrajeeth.tpshield.TpShield;
 import dev.indrajeeth.tpshield.util.MessageUtil;
+import dev.indrajeeth.tpshield.util.VanishUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -35,7 +36,7 @@ public class TPACommand extends SimpleCommandHandler {
         String targetName = args[0];
         Player target = Bukkit.getPlayer(targetName);
 
-        if (target == null) {
+        if (target == null || VanishUtil.isVanished(target)) {
             MessageUtil.sendMessageWithPlaceholders(player, configManager.getPrefix() + configManager.getMessage("general.player-not-found"));
             return true;
         }
@@ -89,9 +90,9 @@ public class TPACommand extends SimpleCommandHandler {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
-            return getOnlinePlayerNames(sender);
+            return filterByPrefix(getOnlinePlayerNames(sender), args[0]);
         }
-        return null;
+        return List.of();
     }
 }
 
